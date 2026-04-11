@@ -3,7 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
 from typing import Optional
+
+import cv2
+import numpy as np
+import onnxruntime
+from insightface.app import FaceAnalysis
+from insightface.model_zoo import get_model
+
+INSWAPPER_PATH = Path(__file__).parent / "models" / "inswapper_128.onnx"
+DET_SIZE = (640, 640)
 
 
 def select_providers(available: list[str]) -> list[str]:
@@ -29,3 +40,30 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         help="Optional cap: process only the first N seconds of the video.",
     )
     return parser.parse_args(argv)
+
+
+def build_face_analyzer(providers: list[str]) -> FaceAnalysis:
+    app = FaceAnalysis(name="buffalo_l", providers=providers)
+    app.prepare(ctx_id=0, det_size=DET_SIZE)
+    return app
+
+
+def load_swapper(providers: list[str]):
+    if not INSWAPPER_PATH.exists():
+        raise FileNotFoundError(
+            f"inswapper model not found at {INSWAPPER_PATH}. "
+            "Download it with: curl -L -o models/inswapper_128.onnx "
+            "https://huggingface.co/ezioruan/inswapper_128.onnx/resolve/main/inswapper_128.onnx"
+        )
+    return get_model(str(INSWAPPER_PATH), providers=providers)
+
+
+def extract_reference_face(face_analyzer: FaceAnalysis, image_path: Path):
+    image = cv2.imread(str(image_path))
+    if image is None:
+        raise FileNotFoundError(f"Could not read reference image: {image_path}")
+    faces = face_analyzer.get(image)
+    if not faces:
+        raise ValueError(f"No face detected in reference image: {image_path}")
+    faces.sort(key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]), reverse=True)
+    return faces[0]
