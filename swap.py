@@ -67,3 +67,66 @@ def extract_reference_face(face_analyzer: FaceAnalysis, image_path: Path):
         raise ValueError(f"No face detected in reference image: {image_path}")
     faces.sort(key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]), reverse=True)
     return faces[0]
+
+
+def open_video(video_path: Path) -> tuple[cv2.VideoCapture, float, int, int, int]:
+    cap = cv2.VideoCapture(str(video_path))
+    if not cap.isOpened():
+        raise FileNotFoundError(f"Could not open video: {video_path}")
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    return cap, fps, width, height, total
+
+
+def swap_one_frame(frame, face_analyzer: FaceAnalysis, swapper, source_face) -> np.ndarray:
+    faces = face_analyzer.get(frame)
+    if not faces:
+        return frame
+    result = frame
+    for target_face in faces:
+        result = swapper.get(result, target_face, source_face, paste_back=True)
+    return result
+
+
+def process_video(
+    video_path: Path,
+    intermediate_path: Path,
+    face_analyzer: FaceAnalysis,
+    swapper,
+    source_face,
+    max_seconds: Optional[int],
+) -> tuple[int, float]:
+    cap, fps, width, height, total = open_video(video_path)
+
+    frame_limit = total
+    if max_seconds is not None:
+        frame_limit = min(total, int(fps * max_seconds))
+
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(str(intermediate_path), fourcc, fps, (width, height))
+    if not writer.isOpened():
+        cap.release()
+        raise RuntimeError(f"Could not open writer for {intermediate_path}")
+
+    import time
+    start = time.perf_counter()
+    processed = 0
+    try:
+        while processed < frame_limit:
+            ok, frame = cap.read()
+            if not ok:
+                break
+            swapped = swap_one_frame(frame, face_analyzer, swapper, source_face)
+            writer.write(swapped)
+            processed += 1
+            if processed % 30 == 0:
+                elapsed = time.perf_counter() - start
+                print(f"  frame {processed}/{frame_limit}  ({processed / elapsed:.1f} fps)")
+    finally:
+        cap.release()
+        writer.release()
+
+    elapsed = time.perf_counter() - start
+    return processed, elapsed
