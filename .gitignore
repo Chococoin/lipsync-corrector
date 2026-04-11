@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# uv
+.uv/
+
+# Project artifacts
+models/*.onnx
+models/*.pt
+models/*.pth
+examples/*.mp4
+examples/*.mov
+examples/*.jpg
+examples/*.jpeg
+examples/*.png
+examples/*.wav
+examples/*.mp3
+
+# macOS
+.DS_Store
