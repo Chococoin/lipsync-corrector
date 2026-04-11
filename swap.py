@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -130,3 +133,43 @@ def process_video(
 
     elapsed = time.perf_counter() - start
     return processed, elapsed
+
+
+def ensure_ffmpeg() -> None:
+    if shutil.which("ffmpeg") is None:
+        raise RuntimeError("ffmpeg not found in PATH. Install with: brew install ffmpeg")
+
+
+def extract_audio(video_path: Path, audio_out: Path) -> bool:
+    """Extract the audio track to a temp file. Returns False if the video has no audio."""
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries",
+         "stream=codec_type", "-of", "csv=p=0", str(video_path)],
+        capture_output=True, text=True,
+    )
+    if "audio" not in probe.stdout:
+        return False
+    subprocess.run(
+        ["ffmpeg", "-y", "-loglevel", "error", "-i", str(video_path),
+         "-vn", "-acodec", "copy", str(audio_out)],
+        check=True,
+    )
+    return True
+
+
+def mux_video_audio(video_in: Path, audio_in: Path, output: Path) -> None:
+    subprocess.run(
+        ["ffmpeg", "-y", "-loglevel", "error",
+         "-i", str(video_in), "-i", str(audio_in),
+         "-c:v", "copy", "-c:a", "copy",
+         "-map", "0:v:0", "-map", "1:a:0",
+         "-shortest", str(output)],
+        check=True,
+    )
+
+
+def copy_video_only(video_in: Path, output: Path) -> None:
+    subprocess.run(
+        ["ffmpeg", "-y", "-loglevel", "error", "-i", str(video_in), "-c", "copy", str(output)],
+        check=True,
+    )
