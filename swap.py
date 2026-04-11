@@ -173,3 +173,58 @@ def copy_video_only(video_in: Path, output: Path) -> None:
         ["ffmpeg", "-y", "-loglevel", "error", "-i", str(video_in), "-c", "copy", str(output)],
         check=True,
     )
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    args = parse_args(argv)
+    ensure_ffmpeg()
+
+    face_path = Path(args.face)
+    video_path = Path(args.video)
+    output_path = Path(args.output)
+
+    if not face_path.exists():
+        print(f"error: reference face not found: {face_path}", file=sys.stderr)
+        return 1
+    if not video_path.exists():
+        print(f"error: input video not found: {video_path}", file=sys.stderr)
+        return 1
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    providers = select_providers(onnxruntime.get_available_providers())
+    print(f"Using providers: {providers}")
+
+    print("Loading face analyzer...")
+    face_analyzer = build_face_analyzer(providers)
+
+    print("Loading swapper model...")
+    swapper = load_swapper(providers)
+
+    print(f"Extracting reference face from {face_path}...")
+    source_face = extract_reference_face(face_analyzer, face_path)
+
+    with tempfile.TemporaryDirectory(prefix="swap-") as tmp:
+        tmp_dir = Path(tmp)
+        intermediate = tmp_dir / "video_no_audio.mp4"
+        audio = tmp_dir / "audio.aac"
+
+        print(f"Processing {video_path} -> intermediate (no audio)...")
+        processed, elapsed = process_video(
+            video_path, intermediate, face_analyzer, swapper, source_face, args.max_seconds,
+        )
+        print(f"Processed {processed} frames in {elapsed:.1f}s ({processed / max(elapsed, 1e-6):.2f} fps)")
+
+        print("Muxing audio...")
+        had_audio = extract_audio(video_path, audio)
+        if had_audio:
+            mux_video_audio(intermediate, audio, output_path)
+        else:
+            print("  (input has no audio, copying video stream)")
+            copy_video_only(intermediate, output_path)
+
+    print(f"Done. Output: {output_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
