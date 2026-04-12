@@ -66,3 +66,34 @@ class VideoReader:
 
     def __exit__(self, *exc) -> None:
         self.close()
+
+
+class VideoWriter:
+    """Context manager for writing video frames to an mp4 file."""
+
+    def __init__(self, path: Path, fps: float, width: int, height: int) -> None:
+        self._path = Path(path)
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        self._writer = cv2.VideoWriter(str(self._path), fourcc, fps, (width, height))
+        if not self._writer.isOpened():
+            raise RuntimeError(f"Could not open video writer for: {self._path}")
+        self._frames_written = 0
+
+    @property
+    def frames_written(self) -> int:
+        return self._frames_written
+
+    def write(self, frame: np.ndarray) -> None:
+        self._writer.write(frame)
+        self._frames_written += 1
+
+    def close(self) -> None:
+        if self._writer is not None:
+            self._writer.release()
+            self._writer = None
+
+    def __enter__(self) -> VideoWriter:
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()

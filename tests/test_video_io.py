@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from core.video_io import VideoReader
+from core.video_io import VideoReader, VideoWriter
 
 
 class TestVideoReader:
@@ -43,3 +43,34 @@ class TestVideoReader:
         reader.close()
         frames = list(reader)
         assert frames == []
+
+
+class TestVideoWriter:
+    def test_writes_frames(self, tmp_path):
+        output = tmp_path / "output.mp4"
+        with VideoWriter(output, fps=10.0, width=64, height=64) as writer:
+            for i in range(5):
+                frame = np.full((64, 64, 3), (i * 50, 0, 0), dtype=np.uint8)
+                writer.write(frame)
+            assert writer.frames_written == 5
+        assert output.exists()
+        assert output.stat().st_size > 0
+
+    def test_written_video_is_readable(self, tmp_path):
+        output = tmp_path / "roundtrip.mp4"
+        original_frames = []
+        for i in range(5):
+            original_frames.append(np.full((64, 64, 3), (i * 50, 0, 0), dtype=np.uint8))
+
+        with VideoWriter(output, fps=10.0, width=64, height=64) as writer:
+            for f in original_frames:
+                writer.write(f)
+
+        with VideoReader(output) as reader:
+            read_frames = list(reader)
+            assert len(read_frames) == 5
+
+    def test_raises_on_invalid_path(self, tmp_path):
+        bad_path = tmp_path / "nonexistent_dir" / "output.mp4"
+        with pytest.raises(RuntimeError):
+            VideoWriter(bad_path, fps=10.0, width=64, height=64)
