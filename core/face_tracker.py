@@ -33,14 +33,15 @@ class BboxSmoother:
         confidence: float = 0.0,
     ) -> Optional[TrackedFace]:
         if bbox is not None:
+            bbox_f = bbox.astype(np.float64)
             if self._last_bbox is None:
-                smoothed = bbox.copy().astype(np.float64)
+                smoothed = bbox_f.copy()
             else:
-                smoothed = self._alpha * bbox + (1 - self._alpha) * self._last_bbox
+                smoothed = self._alpha * bbox_f + (1 - self._alpha) * self._last_bbox
             self._last_bbox = smoothed
-            self._last_landmarks = landmarks
+            self._last_landmarks = landmarks.copy() if landmarks is not None else None
             self._gap_count = 0
-            return TrackedFace(bbox=smoothed, landmarks=landmarks, confidence=confidence, detected=True)
+            return TrackedFace(bbox=smoothed, landmarks=self._last_landmarks, confidence=confidence, detected=True)
 
         self._gap_count += 1
         if self._gap_count <= self._max_gap and self._last_bbox is not None:

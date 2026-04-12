@@ -115,7 +115,7 @@ class TestFaceTracker:
         result = tracker.track(frame)
         assert result is None
 
-    def test_gap_handling_on_faceless_frames(self):
+    def test_faceless_frames_return_none(self):
         tracker = FaceTracker(max_gap=2)
         frame_with_no_face = np.full((480, 640, 3), (0, 0, 0), dtype=np.uint8)
         results = [tracker.track(frame_with_no_face) for _ in range(5)]
@@ -170,3 +170,18 @@ class TestDrawTrackingOverlay:
         )
         result = draw_tracking_overlay(frame, tracked)
         assert not np.array_equal(result, frame)
+
+    def test_interpolated_uses_orange_color(self):
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        tracked = TrackedFace(
+            bbox=np.array([10, 10, 50, 50], dtype=np.float64),
+            landmarks=None,
+            confidence=0.0,
+            detected=False,
+        )
+        result = draw_tracking_overlay(frame, tracked)
+        bbox_pixels = result[10:50, 10:50]
+        has_orange = np.any((bbox_pixels[..., 0] == 0) & (bbox_pixels[..., 1] == 165) & (bbox_pixels[..., 2] == 255))
+        has_green = np.any((bbox_pixels[..., 0] == 0) & (bbox_pixels[..., 1] == 255) & (bbox_pixels[..., 2] == 0))
+        assert has_orange
+        assert not has_green
