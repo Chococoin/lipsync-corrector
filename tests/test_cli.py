@@ -33,6 +33,14 @@ class TestParseArgs:
         args = parse_args(["--video", "in.mp4", "--output", "out.mp4"])
         assert args.debug_tracking is False
 
+    def test_lipsync_flag_accepted(self):
+        args = parse_args(["--video", "in.mp4", "--output", "out.mp4", "--lipsync"])
+        assert args.lipsync is True
+
+    def test_lipsync_default_false(self):
+        args = parse_args(["--video", "in.mp4", "--output", "out.mp4"])
+        assert args.lipsync is False
+
 
 class TestMainPassthrough:
     def test_passthrough_preserves_frame_count(self, tmp_video, tmp_path):
@@ -54,3 +62,39 @@ class TestMainPassthrough:
     def test_returns_1_for_missing_video(self, tmp_path):
         result = main(["--video", str(tmp_path / "nope.mp4"), "--output", str(tmp_path / "out.mp4")])
         assert result == 1
+
+
+class TestMainLipsync:
+    def test_lipsync_preserves_frame_count(self, tmp_video_with_audio, tmp_path):
+        output = tmp_path / "output.mp4"
+        result = main([
+            "--video", str(tmp_video_with_audio),
+            "--output", str(output),
+            "--lipsync",
+        ])
+        assert result == 0
+        assert output.exists()
+        from core.video_io import VideoReader
+        with VideoReader(output) as reader:
+            assert reader.frame_count == 10
+
+    def test_lipsync_preserves_audio(self, tmp_video_with_audio, tmp_path):
+        output = tmp_path / "output.mp4"
+        result = main([
+            "--video", str(tmp_video_with_audio),
+            "--output", str(output),
+            "--lipsync",
+        ])
+        assert result == 0
+        from core.video_io import has_audio_stream
+        assert has_audio_stream(output) is True
+
+    def test_lipsync_on_faceless_video_still_writes_output(self, tmp_video, tmp_path):
+        output = tmp_path / "output.mp4"
+        result = main([
+            "--video", str(tmp_video),
+            "--output", str(output),
+            "--lipsync",
+        ])
+        assert result == 0
+        assert output.exists()

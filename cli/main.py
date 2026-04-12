@@ -37,6 +37,13 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         default=False,
         help="Overlay face-tracking bounding boxes on the output video.",
     )
+    parser.add_argument(
+        "--lipsync",
+        action="store_true",
+        default=False,
+        help="Run the full lipsync pipeline (track → crop → model → blend → write). "
+             "Milestone 3a uses an IdentityModel placeholder.",
+    )
     return parser.parse_args(argv)
 
 
@@ -59,6 +66,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         print("Loading face tracker...")
         tracker = FaceTracker()
 
+    lipsync_tracker = None
+    lipsync_model = None
+    crop_face_region = None
+    blend_back = None
+    if args.lipsync:
+        from core.face_tracker import FaceTracker
+        from core.lipsync_model import IdentityModel
+        from core.mouth_region import crop_face_region
+        from core.blender import blend_back
+        print("Loading lip-sync pipeline (placeholder IdentityModel)...")
+        lipsync_tracker = FaceTracker()
+        lipsync_model = IdentityModel()
+
     with VideoReader(video_path) as reader:
         print(f"Input: {video_path} ({reader.frame_count} frames, {reader.fps:.1f} fps, {reader.width}x{reader.height})")
 
@@ -71,6 +91,12 @@ def main(argv: Optional[list[str]] = None) -> int:
                     if tracker is not None:
                         tracked = tracker.track(frame)
                         frame = draw_tracking_overlay(frame, tracked)
+                    elif lipsync_tracker is not None:
+                        tracked = lipsync_tracker.track(frame)
+                        if tracked is not None:
+                            face_crop = crop_face_region(frame, tracked)
+                            processed = lipsync_model.process([face_crop.image], args.audio)
+                            frame = blend_back(frame, processed[0], face_crop)
                     writer.write(frame)
                 print(f"Wrote {writer.frames_written} frames to intermediate.")
 
