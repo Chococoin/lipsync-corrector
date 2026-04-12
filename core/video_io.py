@@ -97,3 +97,51 @@ class VideoWriter:
 
     def __exit__(self, *exc) -> None:
         self.close()
+
+
+def ensure_ffmpeg() -> None:
+    """Raise RuntimeError if ffmpeg is not in PATH."""
+    if shutil.which("ffmpeg") is None:
+        raise RuntimeError("ffmpeg not found in PATH. Install with: brew install ffmpeg")
+
+
+def has_audio_stream(video_path: Path) -> bool:
+    """Check whether a video file contains an audio stream."""
+    probe = subprocess.run(
+        [
+            "ffprobe", "-v", "error", "-select_streams", "a",
+            "-show_entries", "stream=codec_type", "-of", "csv=p=0",
+            str(video_path),
+        ],
+        capture_output=True, text=True,
+    )
+    return "audio" in probe.stdout
+
+
+def extract_audio(video_path: Path, audio_out: Path) -> bool:
+    """Extract the audio track from a video. Returns False if video has no audio."""
+    if not has_audio_stream(video_path):
+        return False
+    subprocess.run(
+        [
+            "ffmpeg", "-y", "-loglevel", "error",
+            "-i", str(video_path), "-vn", "-acodec", "copy",
+            str(audio_out),
+        ],
+        check=True,
+    )
+    return True
+
+
+def mux_video_audio(video_in: Path, audio_in: Path, output: Path) -> None:
+    """Combine a video file (no audio) with an audio file into a single output."""
+    subprocess.run(
+        [
+            "ffmpeg", "-y", "-loglevel", "error",
+            "-i", str(video_in), "-i", str(audio_in),
+            "-c:v", "copy", "-c:a", "copy",
+            "-map", "0:v:0", "-map", "1:a:0",
+            "-shortest", str(output),
+        ],
+        check=True,
+    )

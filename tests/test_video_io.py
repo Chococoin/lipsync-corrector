@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from core.video_io import VideoReader, VideoWriter
+from core.video_io import ensure_ffmpeg, has_audio_stream, extract_audio, mux_video_audio
 
 
 class TestVideoReader:
@@ -74,3 +75,34 @@ class TestVideoWriter:
         bad_path = tmp_path / "nonexistent_dir" / "output.mp4"
         with pytest.raises(RuntimeError):
             VideoWriter(bad_path, fps=10.0, width=64, height=64)
+
+
+class TestFfmpegHelpers:
+    def test_ensure_ffmpeg_does_not_raise(self):
+        ensure_ffmpeg()
+
+    def test_has_audio_stream_false_for_no_audio(self, tmp_video):
+        assert has_audio_stream(tmp_video) is False
+
+    def test_has_audio_stream_true_for_audio(self, tmp_video_with_audio):
+        assert has_audio_stream(tmp_video_with_audio) is True
+
+    def test_extract_audio_returns_false_for_no_audio(self, tmp_video, tmp_path):
+        result = extract_audio(tmp_video, tmp_path / "audio.aac")
+        assert result is False
+
+    def test_extract_audio_returns_true_for_audio(self, tmp_video_with_audio, tmp_path):
+        audio_out = tmp_path / "audio.aac"
+        result = extract_audio(tmp_video_with_audio, audio_out)
+        assert result is True
+        assert audio_out.exists()
+        assert audio_out.stat().st_size > 0
+
+    def test_mux_video_audio_produces_output(self, tmp_video, tmp_video_with_audio, tmp_path):
+        audio_out = tmp_path / "extracted.aac"
+        extract_audio(tmp_video_with_audio, audio_out)
+        muxed = tmp_path / "muxed.mp4"
+        mux_video_audio(tmp_video, audio_out, muxed)
+        assert muxed.exists()
+        assert muxed.stat().st_size > 0
+        assert has_audio_stream(muxed) is True
