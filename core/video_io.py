@@ -100,9 +100,11 @@ class VideoWriter:
 
 
 def ensure_ffmpeg() -> None:
-    """Raise RuntimeError if ffmpeg is not in PATH."""
+    """Raise RuntimeError if ffmpeg or ffprobe is not in PATH."""
     if shutil.which("ffmpeg") is None:
         raise RuntimeError("ffmpeg not found in PATH. Install with: brew install ffmpeg")
+    if shutil.which("ffprobe") is None:
+        raise RuntimeError("ffprobe not found in PATH. Install with: brew install ffmpeg")
 
 
 def has_audio_stream(video_path: Path) -> bool:
