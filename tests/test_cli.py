@@ -25,6 +25,14 @@ class TestParseArgs:
         args = parse_args(["--video", "in.mp4", "--output", "out.mp4"])
         assert args.audio is None
 
+    def test_debug_tracking_flag_accepted(self):
+        args = parse_args(["--video", "in.mp4", "--output", "out.mp4", "--debug-tracking"])
+        assert args.debug_tracking is True
+
+    def test_debug_tracking_default_false(self):
+        args = parse_args(["--video", "in.mp4", "--output", "out.mp4"])
+        assert args.debug_tracking is False
+
 
 class TestMainPassthrough:
     def test_passthrough_preserves_frame_count(self, tmp_video, tmp_path):

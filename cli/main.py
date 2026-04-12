@@ -31,6 +31,12 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         default=None,
         help="Path to the dubbed audio (not yet implemented, reserved for Milestone 3).",
     )
+    parser.add_argument(
+        "--debug-tracking",
+        action="store_true",
+        default=False,
+        help="Overlay face-tracking bounding boxes on the output video.",
+    )
     return parser.parse_args(argv)
 
 
@@ -47,6 +53,12 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    tracker = None
+    if args.debug_tracking:
+        from core.face_tracker import FaceTracker, draw_tracking_overlay
+        print("Loading face tracker...")
+        tracker = FaceTracker()
+
     with VideoReader(video_path) as reader:
         print(f"Input: {video_path} ({reader.frame_count} frames, {reader.fps:.1f} fps, {reader.width}x{reader.height})")
 
@@ -56,6 +68,9 @@ def main(argv: Optional[list[str]] = None) -> int:
 
             with VideoWriter(intermediate, fps=reader.fps, width=reader.width, height=reader.height) as writer:
                 for frame in reader:
+                    if tracker is not None:
+                        tracked = tracker.track(frame)
+                        frame = draw_tracking_overlay(frame, tracked)
                     writer.write(frame)
                 print(f"Wrote {writer.frames_written} frames to intermediate.")
 

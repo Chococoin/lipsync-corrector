@@ -90,3 +90,19 @@ class FaceTracker:
 
     def reset(self) -> None:
         self._smoother.reset()
+
+
+def draw_tracking_overlay(frame: np.ndarray, tracked: Optional[TrackedFace]) -> np.ndarray:
+    """Draw a bounding box and landmarks overlay on a frame copy."""
+    result = frame.copy()
+    if tracked is None:
+        return result
+    x1, y1, x2, y2 = tracked.bbox.astype(int)
+    color = (0, 255, 0) if tracked.detected else (0, 165, 255)
+    cv2.rectangle(result, (x1, y1), (x2, y2), color, 2)
+    label = f"{tracked.confidence:.2f}" if tracked.detected else "interp"
+    cv2.putText(result, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+    if tracked.landmarks is not None:
+        for lx, ly in tracked.landmarks.astype(int):
+            cv2.circle(result, (int(lx), int(ly)), 2, (255, 0, 0), -1)
+    return result

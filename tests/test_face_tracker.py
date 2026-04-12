@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from core.face_tracker import BboxSmoother, FaceTracker, TrackedFace
+from core.face_tracker import BboxSmoother, FaceTracker, TrackedFace, draw_tracking_overlay
 
 
 class TestTrackedFace:
@@ -128,3 +128,45 @@ class TestFaceTracker:
         tracker.reset()
         result = tracker.track(frame)
         assert result is None
+
+
+class TestDrawTrackingOverlay:
+    def test_returns_copy_not_original(self):
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        tracked = TrackedFace(
+            bbox=np.array([10, 10, 50, 50], dtype=np.float64),
+            landmarks=None,
+            confidence=0.9,
+            detected=True,
+        )
+        result = draw_tracking_overlay(frame, tracked)
+        assert result is not frame
+        assert result.shape == frame.shape
+
+    def test_modifies_frame_when_tracked(self):
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        tracked = TrackedFace(
+            bbox=np.array([10, 10, 50, 50], dtype=np.float64),
+            landmarks=None,
+            confidence=0.9,
+            detected=True,
+        )
+        result = draw_tracking_overlay(frame, tracked)
+        assert not np.array_equal(result, frame)
+
+    def test_returns_unchanged_when_none(self):
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        result = draw_tracking_overlay(frame, None)
+        np.testing.assert_array_equal(result, frame)
+
+    def test_handles_landmarks(self):
+        frame = np.zeros((100, 100, 3), dtype=np.uint8)
+        lmk = np.array([[20, 25], [40, 25], [30, 35], [22, 45], [38, 45]], dtype=np.float64)
+        tracked = TrackedFace(
+            bbox=np.array([10, 10, 50, 50], dtype=np.float64),
+            landmarks=lmk,
+            confidence=0.9,
+            detected=True,
+        )
+        result = draw_tracking_overlay(frame, tracked)
+        assert not np.array_equal(result, frame)
