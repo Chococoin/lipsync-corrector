@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from core.face_tracker import BboxSmoother, TrackedFace
+from core.face_tracker import BboxSmoother, FaceTracker, TrackedFace
 
 
 class TestTrackedFace:
@@ -101,4 +101,30 @@ class TestBboxSmoother:
     def test_none_before_any_observation(self):
         smoother = BboxSmoother(alpha=0.3, max_gap=5)
         result = smoother.update(None)
+        assert result is None
+
+
+class TestFaceTracker:
+    def test_loads_without_crashing(self):
+        tracker = FaceTracker()
+        assert tracker is not None
+
+    def test_returns_none_for_solid_color_frame(self):
+        tracker = FaceTracker()
+        frame = np.full((480, 640, 3), (128, 128, 128), dtype=np.uint8)
+        result = tracker.track(frame)
+        assert result is None
+
+    def test_gap_handling_on_faceless_frames(self):
+        tracker = FaceTracker(max_gap=2)
+        frame_with_no_face = np.full((480, 640, 3), (0, 0, 0), dtype=np.uint8)
+        results = [tracker.track(frame_with_no_face) for _ in range(5)]
+        assert all(r is None for r in results)
+
+    def test_reset_clears_state(self):
+        tracker = FaceTracker()
+        frame = np.full((480, 640, 3), (128, 128, 128), dtype=np.uint8)
+        tracker.track(frame)
+        tracker.reset()
+        result = tracker.track(frame)
         assert result is None
