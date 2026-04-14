@@ -61,3 +61,19 @@ uv run python -m cli.main \
   --output out.mp4 \
   --lipsync --model wav2lip
 ```
+
+## Transcription demo (auto-dub sub-project: STT)
+
+The `core.transcription` module exposes a Python API for speech-to-text
+via `mlx-whisper`. A standalone demo script transcribes a video end-to-end:
+
+```bash
+uv run python examples/transcribe_demo.py <video_path> [<output_stem>]
+```
+
+Produces `<stem>.wav` (extracted audio), `<stem>.json` (canonical data
+with word-level timestamps + probabilities) and `<stem>.srt` (human-readable
+subtitles).
+
+First run downloads the default `medium` Whisper checkpoint (~1.5 GB) to
+`~/.cache/huggingface/hub/`. Subsequent runs use the cached weights.
