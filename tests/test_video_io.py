@@ -2,7 +2,13 @@ import numpy as np
 import pytest
 
 from core.video_io import VideoReader, VideoWriter
-from core.video_io import ensure_ffmpeg, has_audio_stream, extract_audio, mux_video_audio
+from core.video_io import (
+    ensure_ffmpeg,
+    extract_audio,
+    extract_audio_as_pcm_wav,
+    has_audio_stream,
+    mux_video_audio,
+)
 
 
 class TestVideoReader:
@@ -97,6 +103,30 @@ class TestFfmpegHelpers:
         assert result is True
         assert audio_out.exists()
         assert audio_out.stat().st_size > 0
+
+    def test_extract_audio_as_pcm_wav_returns_false_for_no_audio(self, tmp_video, tmp_path):
+        result = extract_audio_as_pcm_wav(tmp_video, tmp_path / "audio.wav")
+        assert result is False
+
+    def test_extract_audio_as_pcm_wav_produces_pcm_16k_mono(self, tmp_video_with_audio, tmp_path):
+        import subprocess
+        wav_out = tmp_path / "audio.wav"
+        result = extract_audio_as_pcm_wav(tmp_video_with_audio, wav_out)
+        assert result is True
+        assert wav_out.exists()
+        assert wav_out.stat().st_size > 0
+        probe = subprocess.run(
+            [
+                "ffprobe", "-v", "error",
+                "-show_entries", "stream=codec_name,sample_rate,channels",
+                "-of", "default=noprint_wrappers=1",
+                str(wav_out),
+            ],
+            capture_output=True, text=True, check=True,
+        )
+        assert "codec_name=pcm_s16le" in probe.stdout
+        assert "sample_rate=16000" in probe.stdout
+        assert "channels=1" in probe.stdout
 
     def test_mux_video_audio_produces_output(self, tmp_video, tmp_video_with_audio, tmp_path):
         audio_out = tmp_path / "extracted.aac"

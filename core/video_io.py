@@ -135,6 +135,36 @@ def extract_audio(video_path: Path, audio_out: Path) -> bool:
     return True
 
 
+def extract_audio_as_pcm_wav(
+    video_path: Path,
+    wav_out: Path,
+    sample_rate: int = 16000,
+    mono: bool = True,
+) -> bool:
+    """Decode a video's audio track into a PCM WAV file.
+
+    Unlike extract_audio (which copies the source codec into a wav container),
+    this function re-encodes to signed 16-bit PCM and resamples, producing a
+    file that ML audio libraries (librosa, soundfile, mlx-whisper) can load
+    without codec negotiation. Returns False if the video has no audio.
+    """
+    if not has_audio_stream(video_path):
+        return False
+    subprocess.run(
+        [
+            "ffmpeg", "-y", "-loglevel", "error",
+            "-i", str(video_path),
+            "-vn",
+            "-ac", "1" if mono else "2",
+            "-ar", str(sample_rate),
+            "-c:a", "pcm_s16le",
+            str(wav_out),
+        ],
+        check=True,
+    )
+    return True
+
+
 def mux_video_audio(video_in: Path, audio_in: Path, output: Path) -> None:
     """Combine a video file (no audio) with an audio file into a single output."""
     subprocess.run(
