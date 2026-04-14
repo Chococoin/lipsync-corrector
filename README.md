@@ -77,3 +77,23 @@ subtitles).
 
 First run downloads the default `medium` Whisper checkpoint (~1.5 GB) to
 `~/.cache/huggingface/hub/`. Subsequent runs use the cached weights.
+
+## Translation demo (auto-dub sub-project: translate)
+
+The `core.translation` module translates a Transcription into another
+language via the Claude API:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+uv run python examples/translate_demo.py examples/veo_stt.json en
+```
+
+Reads the source JSON (produced by `transcribe_demo.py`), calls Claude
+Haiku 4.5 with a structured tool schema that forces a 1:1 segment mapping,
+and writes the translated result as `examples/veo_stt.en.json`. Segment
+timestamps are preserved; word-level timestamps are dropped in the
+translated output.
+
+Default model is `claude-haiku-4-5-20251001`. Cost is on the order of
+a fraction of a cent per 10 minutes of transcribed content at current
+pricing.
