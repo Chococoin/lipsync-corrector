@@ -29,3 +29,35 @@ uv run python swap.py \
   --output examples/output.mp4 \
   --max-seconds 15
 ```
+
+## Downloading Wav2Lip weights
+
+The `--model wav2lip` path (Milestone 3b) requires the pretrained checkpoint
+`wav2lip_gan.pth` (~420 MB) to exist at `models/wav2lip_gan.pth`. It is not
+checked into git. Download it once:
+
+```bash
+mkdir -p models
+curl -fL -o models/wav2lip_gan.pth \
+  https://huggingface.co/numz/wav2lip_studio/resolve/main/Wav2lip/wav2lip_gan.pth
+```
+
+If the HuggingFace mirror disappears, search HuggingFace for
+`wav2lip_gan.pth` — several community mirrors host the same file.
+
+## Usage (Track B)
+
+```bash
+# Passthrough (Milestone 1)
+uv run python -m cli.main --video in.mp4 --output out.mp4
+
+# Pipeline with placeholder IdentityModel (Milestone 3a)
+uv run python -m cli.main --video in.mp4 --output out.mp4 --lipsync
+
+# Full Wav2Lip lip-sync (Milestone 3b, requires wav2lip_gan.pth)
+uv run python -m cli.main \
+  --video in.mp4 \
+  --audio dubbed.wav \
+  --output out.mp4 \
+  --lipsync --model wav2lip
+```
