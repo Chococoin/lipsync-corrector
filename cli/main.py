@@ -44,6 +44,14 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         help="Run the full lipsync pipeline (track → crop → model → blend → write). "
              "Milestone 3a uses an IdentityModel placeholder.",
     )
+    parser.add_argument(
+        "--model",
+        choices=["identity", "wav2lip"],
+        default="identity",
+        help="Which LipSyncModel to use. 'identity' is the placeholder that passes "
+             "crops through unchanged (default). 'wav2lip' runs the real pretrained "
+             "Wav2Lip GAN model and requires models/wav2lip_gan.pth to be present.",
+    )
     return parser.parse_args(argv)
 
 
@@ -72,12 +80,24 @@ def main(argv: Optional[list[str]] = None) -> int:
     blend_back = None
     if args.lipsync:
         from core.face_tracker import FaceTracker
-        from core.lipsync_model import IdentityModel
         from core.mouth_region import crop_face_region
         from core.blender import blend_back
-        print("Loading lip-sync pipeline (placeholder IdentityModel)...")
         lipsync_tracker = FaceTracker()
-        lipsync_model = IdentityModel()
+        if args.model == "identity":
+            from core.lipsync_model import IdentityModel
+            print("Loading lip-sync pipeline (placeholder IdentityModel)...")
+            lipsync_model = IdentityModel()
+        else:
+            import core.wav2lip_model as _w2l_mod
+            from core.wav2lip_model import Wav2LipModel
+            print("Loading lip-sync pipeline (Wav2LipModel)...")
+            with VideoReader(video_path) as _probe:
+                _fps = _probe.fps
+            try:
+                lipsync_model = Wav2LipModel(fps=_fps, checkpoint_path=_w2l_mod.DEFAULT_CHECKPOINT_PATH)
+            except FileNotFoundError as e:
+                print(f"error: {e}", file=sys.stderr)
+                return 1
 
     with VideoReader(video_path) as reader:
         print(f"Input: {video_path} ({reader.frame_count} frames, {reader.fps:.1f} fps, {reader.width}x{reader.height})")

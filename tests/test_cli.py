@@ -41,6 +41,18 @@ class TestParseArgs:
         args = parse_args(["--video", "in.mp4", "--output", "out.mp4"])
         assert args.lipsync is False
 
+    def test_model_flag_accepts_identity(self):
+        args = parse_args(["--video", "in.mp4", "--output", "out.mp4", "--lipsync", "--model", "identity"])
+        assert args.model == "identity"
+
+    def test_model_flag_accepts_wav2lip(self):
+        args = parse_args(["--video", "in.mp4", "--output", "out.mp4", "--lipsync", "--model", "wav2lip"])
+        assert args.model == "wav2lip"
+
+    def test_model_defaults_to_identity(self):
+        args = parse_args(["--video", "in.mp4", "--output", "out.mp4", "--lipsync"])
+        assert args.model == "identity"
+
 
 class TestMainPassthrough:
     def test_passthrough_preserves_frame_count(self, tmp_video, tmp_path):
@@ -98,3 +110,17 @@ class TestMainLipsync:
         ])
         assert result == 0
         assert output.exists()
+
+
+class TestMainWav2LipModel:
+    def test_missing_checkpoint_errors_cleanly(self, tmp_video_with_audio, tmp_path, monkeypatch):
+        import core.wav2lip_model as w
+        missing = tmp_path / "not_there.pth"
+        monkeypatch.setattr(w, "DEFAULT_CHECKPOINT_PATH", missing)
+        result = main([
+            "--video", str(tmp_video_with_audio),
+            "--output", str(tmp_path / "out.mp4"),
+            "--lipsync",
+            "--model", "wav2lip",
+        ])
+        assert result == 1
