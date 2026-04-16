@@ -77,3 +77,70 @@ class TestBlendBack:
         face_crop = _face_crop_at(100, 100, 120, 120, image_size=(20, 20))
         result = blend_back(frame, modified, face_crop, feather_pixels=50)
         assert result.shape == frame.shape
+
+
+class TestBlendBackMouthOnly:
+    def test_mouth_only_default_false_matches_original(self):
+        frame = np.full((480, 640, 3), 100, dtype=np.uint8)
+        modified = np.full((96, 96, 3), 200, dtype=np.uint8)
+        face_crop = _face_crop_at(100, 100, 300, 300)
+        result_default = blend_back(frame, modified, face_crop, feather_pixels=0)
+        result_explicit = blend_back(frame, modified, face_crop, feather_pixels=0, mouth_only=False)
+        np.testing.assert_array_equal(result_default, result_explicit)
+
+    def test_top_of_face_is_original(self):
+        frame = np.full((480, 640, 3), 100, dtype=np.uint8)
+        modified = np.full((96, 96, 3), 200, dtype=np.uint8)
+        face_crop = _face_crop_at(100, 100, 300, 300)
+        result = blend_back(frame, modified, face_crop, feather_pixels=0, mouth_only=True)
+        # Top 30% of bbox (rows 100-159) should be pure original (100).
+        # Using 30% instead of 40% to stay safely above the transition zone.
+        top_region = result[100:160, 150:250, 0]
+        assert np.all(top_region == 100)
+
+    def test_bottom_of_face_is_modified(self):
+        frame = np.full((480, 640, 3), 100, dtype=np.uint8)
+        modified = np.full((96, 96, 3), 200, dtype=np.uint8)
+        face_crop = _face_crop_at(100, 100, 300, 300)
+        result = blend_back(frame, modified, face_crop, feather_pixels=0, mouth_only=True)
+        # Bottom 30% of bbox (rows 241-299) should be pure modified (200).
+        # Using 70% to stay safely below the transition zone.
+        bottom_region = result[241:299, 150:250, 0]
+        assert np.all(bottom_region >= 199)
+
+    def test_transition_zone_is_blended(self):
+        frame = np.full((480, 640, 3), 100, dtype=np.uint8)
+        modified = np.full((96, 96, 3), 200, dtype=np.uint8)
+        face_crop = _face_crop_at(100, 100, 300, 300)
+        result = blend_back(frame, modified, face_crop, feather_pixels=0, mouth_only=True)
+        # Transition zone center (~47.5% of bbox = row 195) should be
+        # between 100 and 200 (a blend of original and modified).
+        # mouth_top_ratio=0.4 → transition starts at row 180
+        # mouth_blend_ratio=0.15 → transition ends at row 210
+        # Center of transition at row 195.
+        transition_value = result[195, 200, 0]
+        assert 110 < transition_value < 190
+
+    def test_outside_bbox_unchanged(self):
+        frame = np.full((480, 640, 3), 100, dtype=np.uint8)
+        modified = np.full((96, 96, 3), 200, dtype=np.uint8)
+        face_crop = _face_crop_at(100, 100, 300, 300)
+        result = blend_back(frame, modified, face_crop, feather_pixels=0, mouth_only=True)
+        np.testing.assert_array_equal(result[0:100, :], frame[0:100, :])
+        np.testing.assert_array_equal(result[300:, :], frame[300:, :])
+        np.testing.assert_array_equal(result[:, 0:100], frame[:, 0:100])
+        np.testing.assert_array_equal(result[:, 300:], frame[:, 300:])
+
+    def test_small_bbox_does_not_crash(self):
+        frame = np.full((480, 640, 3), 100, dtype=np.uint8)
+        modified = np.full((20, 20, 3), 200, dtype=np.uint8)
+        face_crop = _face_crop_at(100, 100, 120, 120, image_size=(20, 20))
+        result = blend_back(frame, modified, face_crop, mouth_only=True)
+        assert result.shape == frame.shape
+
+    def test_returns_copy_not_original(self):
+        frame = np.full((480, 640, 3), 100, dtype=np.uint8)
+        modified = np.full((96, 96, 3), 200, dtype=np.uint8)
+        face_crop = _face_crop_at(100, 100, 300, 300)
+        result = blend_back(frame, modified, face_crop, mouth_only=True)
+        assert result is not frame

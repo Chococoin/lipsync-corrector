@@ -11,14 +11,20 @@ def blend_back(
     modified_crop: np.ndarray,
     face_crop: FaceCrop,
     feather_pixels: int = 8,
+    mouth_only: bool = False,
+    mouth_top_ratio: float = 0.4,
+    mouth_blend_ratio: float = 0.15,
 ) -> np.ndarray:
     """Paste a modified face crop back onto the frame with feathered edges.
 
-    Resizes `modified_crop` to the bbox size stored in `face_crop`, builds a
-    soft alpha mask (inner region = 1, edges fade to 0 over `feather_pixels`
-    pixels), and alpha-blends the result into a copy of the frame.
+    When mouth_only is False (default), the entire crop is blended with a
+    uniform feathered mask — identical to the original behavior.
 
-    Returns a new frame; the input frame is not modified.
+    When mouth_only is True, the mask uses a vertical gradient: zero opacity
+    in the upper face (eyes, forehead stay original), linear ramp through
+    the nose bridge, full opacity in the lower face (mouth from the model).
+    This preserves the original resolution in the upper face while only
+    applying the model's output where it matters.
     """
     result = frame.copy()
     x1, y1, x2, y2 = face_crop.bbox.astype(int)
@@ -29,13 +35,17 @@ def blend_back(
 
     warped = cv2.resize(modified_crop, (dst_w, dst_h), interpolation=cv2.INTER_LINEAR)
 
-    if feather_pixels > 0 and dst_w > 2 * feather_pixels and dst_h > 2 * feather_pixels:
-        inner = np.zeros((dst_h, dst_w), dtype=np.float32)
-        inner[feather_pixels:-feather_pixels, feather_pixels:-feather_pixels] = 1.0
-        k = feather_pixels * 2 + 1
-        mask = cv2.GaussianBlur(inner, (k, k), 0)
+    if mouth_only:
+        mask = _build_mouth_only_mask(dst_h, dst_w, feather_pixels,
+                                       mouth_top_ratio, mouth_blend_ratio)
     else:
-        mask = np.ones((dst_h, dst_w), dtype=np.float32)
+        if feather_pixels > 0 and dst_w > 2 * feather_pixels and dst_h > 2 * feather_pixels:
+            inner = np.zeros((dst_h, dst_w), dtype=np.float32)
+            inner[feather_pixels:-feather_pixels, feather_pixels:-feather_pixels] = 1.0
+            k = feather_pixels * 2 + 1
+            mask = cv2.GaussianBlur(inner, (k, k), 0)
+        else:
+            mask = np.ones((dst_h, dst_w), dtype=np.float32)
 
     mask3 = np.stack([mask, mask, mask], axis=-1)
 
@@ -43,3 +53,42 @@ def blend_back(
     blended = mask3 * warped.astype(np.float32) + (1.0 - mask3) * region
     result[y1:y2, x1:x2] = np.clip(blended, 0, 255).astype(np.uint8)
     return result
+
+
+def _build_mouth_only_mask(
+    dst_h: int,
+    dst_w: int,
+    feather_pixels: int,
+    mouth_top_ratio: float,
+    mouth_blend_ratio: float,
+) -> np.ndarray:
+    """Build a mask that covers only the lower face (mouth region).
+
+    The mask has three vertical zones:
+    - Top (0 to transition_start): 0.0 — original pixels preserved
+    - Transition (transition_start to transition_end): linear ramp 0→1
+    - Bottom (transition_end to dst_h): 1.0 — model output used
+
+    The vertical gradient is multiplied with lateral feathering (left/right
+    edges fade to 0) so the blend is smooth in all directions.
+    """
+    transition_start = int(mouth_top_ratio * dst_h)
+    transition_end = int((mouth_top_ratio + mouth_blend_ratio) * dst_h)
+    transition_end = min(transition_end, dst_h)
+
+    vertical = np.zeros((dst_h, dst_w), dtype=np.float32)
+    if transition_end > transition_start:
+        ramp_len = transition_end - transition_start
+        ramp = np.linspace(0.0, 1.0, ramp_len, dtype=np.float32)
+        vertical[transition_start:transition_end, :] = ramp[:, np.newaxis]
+    vertical[transition_end:, :] = 1.0
+
+    if feather_pixels > 0 and dst_w > 2 * feather_pixels:
+        lateral = np.zeros((dst_h, dst_w), dtype=np.float32)
+        lateral[:, feather_pixels:-feather_pixels] = 1.0
+        k = feather_pixels * 2 + 1
+        lateral = cv2.GaussianBlur(lateral, (k, k), 0)
+    else:
+        lateral = np.ones((dst_h, dst_w), dtype=np.float32)
+
+    return vertical * lateral
