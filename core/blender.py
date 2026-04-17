@@ -13,6 +13,7 @@ def blend_back(
     feather_pixels: int = 8,
     mouth_only: bool = False,
     mouth_top_ratio: float = 0.4,
+    mouth_bottom_ratio: float = 0.75,
     mouth_blend_ratio: float = 0.15,
 ) -> np.ndarray:
     """Paste a modified face crop back onto the frame with feathered edges.
@@ -37,7 +38,8 @@ def blend_back(
 
     if mouth_only:
         mask = _build_mouth_only_mask(dst_h, dst_w, feather_pixels,
-                                       mouth_top_ratio, mouth_blend_ratio)
+                                       mouth_top_ratio, mouth_bottom_ratio,
+                                       mouth_blend_ratio)
     else:
         if feather_pixels > 0 and dst_w > 2 * feather_pixels and dst_h > 2 * feather_pixels:
             inner = np.zeros((dst_h, dst_w), dtype=np.float32)
@@ -60,28 +62,40 @@ def _build_mouth_only_mask(
     dst_w: int,
     feather_pixels: int,
     mouth_top_ratio: float,
+    mouth_bottom_ratio: float,
     mouth_blend_ratio: float,
 ) -> np.ndarray:
-    """Build a mask that covers only the lower face (mouth region).
+    """Build a mask that covers only the mouth region of the face.
 
-    The mask has three vertical zones:
-    - Top (0 to transition_start): 0.0 — original pixels preserved
-    - Transition (transition_start to transition_end): linear ramp 0→1
-    - Bottom (transition_end to dst_h): 1.0 — model output used
+    The mask has five vertical zones:
+    - Top: 0.0 — original pixels (eyes, forehead)
+    - Upper ramp: linear 0→1 (nose bridge transition)
+    - Middle: 1.0 — model output (mouth)
+    - Lower ramp: linear 1→0 (chin transition)
+    - Bottom: 0.0 — original pixels (jaw, neck)
 
     The vertical gradient is multiplied with lateral feathering (left/right
     edges fade to 0) so the blend is smooth in all directions.
     """
-    transition_start = int(mouth_top_ratio * dst_h)
-    transition_end = int((mouth_top_ratio + mouth_blend_ratio) * dst_h)
-    transition_end = min(transition_end, dst_h)
+    top_start = int(mouth_top_ratio * dst_h)
+    top_end = int((mouth_top_ratio + mouth_blend_ratio) * dst_h)
+    top_end = min(top_end, dst_h)
+
+    bot_start = int(mouth_bottom_ratio * dst_h)
+    bot_end = int((mouth_bottom_ratio + mouth_blend_ratio) * dst_h)
+    bot_end = min(bot_end, dst_h)
 
     vertical = np.zeros((dst_h, dst_w), dtype=np.float32)
-    if transition_end > transition_start:
-        ramp_len = transition_end - transition_start
-        ramp = np.linspace(0.0, 1.0, ramp_len, dtype=np.float32)
-        vertical[transition_start:transition_end, :] = ramp[:, np.newaxis]
-    vertical[transition_end:, :] = 1.0
+
+    if top_end > top_start:
+        ramp_up = np.linspace(0.0, 1.0, top_end - top_start, dtype=np.float32)
+        vertical[top_start:top_end, :] = ramp_up[:, np.newaxis]
+
+    vertical[top_end:bot_start, :] = 1.0
+
+    if bot_end > bot_start:
+        ramp_down = np.linspace(1.0, 0.0, bot_end - bot_start, dtype=np.float32)
+        vertical[bot_start:bot_end, :] = ramp_down[:, np.newaxis]
 
     if feather_pixels > 0 and dst_w > 2 * feather_pixels:
         lateral = np.zeros((dst_h, dst_w), dtype=np.float32)

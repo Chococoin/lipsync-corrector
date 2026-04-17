@@ -98,15 +98,37 @@ class TestBlendBackMouthOnly:
         top_region = result[100:160, 150:250, 0]
         assert np.all(top_region == 100)
 
-    def test_bottom_of_face_is_modified(self):
+    def test_mouth_zone_is_modified(self):
         frame = np.full((480, 640, 3), 100, dtype=np.uint8)
         modified = np.full((96, 96, 3), 200, dtype=np.uint8)
         face_crop = _face_crop_at(100, 100, 300, 300)
         result = blend_back(frame, modified, face_crop, feather_pixels=0, mouth_only=True)
-        # Bottom 30% of bbox (rows 241-299) should be pure modified (200).
-        # Using 70% to stay safely below the transition zone.
-        bottom_region = result[241:299, 150:250, 0]
-        assert np.all(bottom_region >= 199)
+        # Middle of the mouth zone (between upper and lower transitions).
+        # top_end = (0.4+0.15)*200 = row 110 relative = row 210 in frame
+        # bot_start = 0.75*200 = row 150 relative = row 250 in frame
+        # Center of mouth zone at ~row 230 in frame.
+        mouth_value = result[230, 200, 0]
+        assert mouth_value >= 199
+
+    def test_bottom_of_face_is_original(self):
+        frame = np.full((480, 640, 3), 100, dtype=np.uint8)
+        modified = np.full((96, 96, 3), 200, dtype=np.uint8)
+        face_crop = _face_crop_at(100, 100, 300, 300)
+        result = blend_back(frame, modified, face_crop, feather_pixels=0, mouth_only=True)
+        # Bottom of bbox below lower transition: (0.75+0.15)*200 = row 180
+        # relative = row 280 in frame. Rows 285-299 should be original.
+        bottom_region = result[285:299, 150:250, 0]
+        assert np.all(bottom_region == 100)
+
+    def test_lower_transition_zone_is_blended(self):
+        frame = np.full((480, 640, 3), 100, dtype=np.uint8)
+        modified = np.full((96, 96, 3), 200, dtype=np.uint8)
+        face_crop = _face_crop_at(100, 100, 300, 300)
+        result = blend_back(frame, modified, face_crop, feather_pixels=0, mouth_only=True)
+        # Lower transition center: (0.75 + 0.075)*200 = row 165 relative
+        # = row 265 in frame. Should be between 100 and 200.
+        lower_transition_value = result[265, 200, 0]
+        assert 110 < lower_transition_value < 190
 
     def test_transition_zone_is_blended(self):
         frame = np.full((480, 640, 3), 100, dtype=np.uint8)
