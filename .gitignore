@@ -22,3 +22,4 @@ examples/*.mp3
 
 # macOS
 .DS_Store
+.env

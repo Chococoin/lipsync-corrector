@@ -60,20 +60,20 @@ class TestTargetWordCount:
         )
 
     def test_english_2_8_seconds(self):
-        # 2.8s × 2.5 wps = 7
-        assert target_word_count(self._seg(0.0, 2.8), "en") == 7
+        # 2.8s × 2.0 wps = 5.6 → 6
+        assert target_word_count(self._seg(0.0, 2.8), "en") == 6
 
     def test_spanish_2_0_seconds(self):
-        # 2.0s × 3.0 wps = 6
-        assert target_word_count(self._seg(0.0, 2.0), "es") == 6
+        # 2.0s × 2.5 wps = 5
+        assert target_word_count(self._seg(0.0, 2.0), "es") == 5
 
     def test_german_3_0_seconds(self):
-        # 3.0s × 2.3 wps = 6.9 → 7
-        assert target_word_count(self._seg(1.0, 4.0), "de") == 7
+        # 3.0s × 1.8 wps = 5.4 → 5
+        assert target_word_count(self._seg(1.0, 4.0), "de") == 5
 
     def test_unknown_language_uses_default(self):
-        # 2.0s × 2.5 (default) = 5
-        assert target_word_count(self._seg(0.0, 2.0), "xx") == 5
+        # 2.0s × 2.0 (default) = 4
+        assert target_word_count(self._seg(0.0, 2.0), "xx") == 4
 
     def test_very_short_segment_returns_at_least_one(self):
         assert target_word_count(self._seg(0.0, 0.1), "en") >= 1

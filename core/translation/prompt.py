@@ -5,17 +5,17 @@ from __future__ import annotations
 from core.transcription.models import Segment
 
 WORDS_PER_SECOND: dict[str, float] = {
-    "es": 3.0,
-    "en": 2.5,
-    "fr": 3.0,
-    "pt": 2.8,
-    "de": 2.3,
-    "it": 2.8,
-    "ja": 4.0,
-    "zh": 3.5,
-    "ko": 3.0,
+    "es": 2.5,
+    "en": 2.0,
+    "fr": 2.5,
+    "pt": 2.3,
+    "de": 1.8,
+    "it": 2.3,
+    "ja": 3.2,
+    "zh": 2.8,
+    "ko": 2.5,
 }
-DEFAULT_WORDS_PER_SECOND = 2.5
+DEFAULT_WORDS_PER_SECOND = 2.0
 
 SYSTEM_PROMPT_TEMPLATE = """\
 You are a professional subtitle translator specializing in conversational
@@ -25,9 +25,10 @@ to {target}.
 Guidelines:
 - Preserve the speaker's tone and register (casual stays casual, formal stays formal).
 - Prefer natural phrasing in the target language over literal word-by-word translation.
-- Each segment includes a target word count. Aim to match it — it represents
-  the natural speaking duration for the target language. Prioritize meaning
-  over exact count, but stay within ±2 words when possible.
+- Each segment includes a target word count. This is a HARD constraint — the
+  translated audio must fit in the original segment's time slot. Simplify the
+  message, drop filler words, or rephrase concisely to match the target count.
+  Never exceed it by more than 1 word.
 - Do not add commentary, disclaimers, or explanations.
 - If a segment is already in the target language, return it unchanged.
 - Return the translation via the `submit_translation` tool.

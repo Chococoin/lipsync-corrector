@@ -1,0 +1,154 @@
+{
+  "language": "es",
+  "segments": [
+    {
+      "text": " Hola a todos, bienvenidos a Cartagena.",
+      "start": 0.0,
+      "end": 2.8,
+      "words": [
+        {
+          "text": " Hola",
+          "start": 0.0,
+          "end": 0.38,
+          "probability": 0.72607421875
+        },
+        {
+          "text": " a",
+          "start": 0.38,
+          "end": 0.62,
+          "probability": 0.927734375
+        },
+        {
+          "text": " todos,",
+          "start": 0.62,
+          "end": 0.94,
+          "probability": 0.9951171875
+        },
+        {
+          "text": " bienvenidos",
+          "start": 1.3,
+          "end": 1.82,
+          "probability": 0.9873046875
+        },
+        {
+          "text": " a",
+          "start": 1.82,
+          "end": 2.1,
+          "probability": 0.99658203125
+        },
+        {
+          "text": " Cartagena.",
+          "start": 2.1,
+          "end": 2.8,
+          "probability": 0.99267578125
+        }
+      ],
+      "avg_logprob": -0.28177078350170237,
+      "no_speech_prob": 0.07696286588907242
+    },
+    {
+      "text": " Miren qué lugar tan hermoso.",
+      "start": 3.14,
+      "end": 5.06,
+      "words": [
+        {
+          "text": " Miren",
+          "start": 3.14,
+          "end": 3.36,
+          "probability": 0.95263671875
+        },
+        {
+          "text": " qué",
+          "start": 3.36,
+          "end": 3.5,
+          "probability": 0.833984375
+        },
+        {
+          "text": " lugar",
+          "start": 3.5,
+          "end": 3.96,
+          "probability": 0.99658203125
+        },
+        {
+          "text": " tan",
+          "start": 3.96,
+          "end": 4.34,
+          "probability": 0.99853515625
+        },
+        {
+          "text": " hermoso.",
+          "start": 4.34,
+          "end": 5.06,
+          "probability": 0.9990234375
+        }
+      ],
+      "avg_logprob": -0.28177078350170237,
+      "no_speech_prob": 0.07696286588907242
+    },
+    {
+      "text": " Estoy muy feliz de estar aquí hoy con ustedes.",
+      "start": 5.18,
+      "end": 7.54,
+      "words": [
+        {
+          "text": " Estoy",
+          "start": 5.18,
+          "end": 5.38,
+          "probability": 0.98046875
+        },
+        {
+          "text": " muy",
+          "start": 5.38,
+          "end": 5.72,
+          "probability": 0.99658203125
+        },
+        {
+          "text": " feliz",
+          "start": 5.72,
+          "end": 5.98,
+          "probability": 0.99658203125
+        },
+        {
+          "text": " de",
+          "start": 5.98,
+          "end": 6.18,
+          "probability": 0.99609375
+        },
+        {
+          "text": " estar",
+          "start": 6.18,
+          "end": 6.32,
+          "probability": 0.99755859375
+        },
+        {
+          "text": " aquí",
+          "start": 6.32,
+          "end": 6.64,
+          "probability": 0.99169921875
+        },
+        {
+          "text": " hoy",
+          "start": 6.64,
+          "end": 6.86,
+          "probability": 0.92333984375
+        },
+        {
+          "text": " con",
+          "start": 6.86,
+          "end": 7.12,
+          "probability": 0.99462890625
+        },
+        {
+          "text": " ustedes.",
+          "start": 7.12,
+          "end": 7.54,
+          "probability": 0.98828125
+        }
+      ],
+      "avg_logprob": -0.28177078350170237,
+      "no_speech_prob": 0.07696286588907242
+    }
+  ],
+  "duration": 7.54,
+  "model_size": "medium"
+}

@@ -94,18 +94,35 @@ def _generate_segments(
     model_name: str,
 ) -> list[np.ndarray]:
     """Generate audio for each segment using XTTS-v2."""
+    import torch
+    _original_load = torch.load
+    torch.load = lambda *a, **kw: _original_load(*a, **{**kw, "weights_only": kw.get("weights_only", False)})
+
     from TTS.api import TTS
 
     device = get_torch_device()
     tts = TTS(model_name).to(device)
 
+    torch.load = _original_load
+
     audios: list[np.ndarray] = []
     for seg in transcription.segments:
+        slot_duration = seg.end - seg.start
+
         wav = tts.tts(
             text=seg.text,
             speaker_wav=str(ref_wav_path),
             language=transcription.language,
         )
-        audios.append(np.array(wav, dtype=np.float32))
+        wav = np.array(wav, dtype=np.float32)
+        actual_duration = len(wav) / XTTS_SAMPLE_RATE
+
+        if actual_duration > slot_duration:
+            import librosa
+            target = slot_duration * 0.98
+            rate = actual_duration / target
+            wav = librosa.effects.time_stretch(wav, rate=rate)
+
+        audios.append(wav)
 
     return audios

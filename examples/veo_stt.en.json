@@ -1,0 +1,31 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "text": "Hello everyone, welcome to Cartagena.",
+      "start": 0.0,
+      "end": 2.8,
+      "words": [],
+      "avg_logprob": -0.28177078350170237,
+      "no_speech_prob": 0.07696286588907242
+    },
+    {
+      "text": "Look at this beautiful place.",
+      "start": 3.14,
+      "end": 5.06,
+      "words": [],
+      "avg_logprob": -0.28177078350170237,
+      "no_speech_prob": 0.07696286588907242
+    },
+    {
+      "text": "I'm so happy to be here with you.",
+      "start": 5.18,
+      "end": 7.54,
+      "words": [],
+      "avg_logprob": -0.28177078350170237,
+      "no_speech_prob": 0.07696286588907242
+    }
+  ],
+  "duration": 7.54,
+  "model_size": "medium"
+}
