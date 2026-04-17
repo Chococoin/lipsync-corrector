@@ -97,3 +97,22 @@ translated output.
 Default model is `claude-haiku-4-5-20251001`. Cost is on the order of
 a fraction of a cent per 10 minutes of transcribed content at current
 pricing.
+
+## TTS demo (auto-dub sub-project: voice synthesis)
+
+The `core.tts` module generates dubbed audio using Coqui XTTS-v2 with
+voice cloning from the original speaker:
+
+```bash
+uv run python examples/tts_demo.py \
+  examples/veo_stt.en.json \
+  examples/veo_audio_16k_mono.wav \
+  examples/veo_dubbed_en.wav
+```
+
+Reads the translated JSON (produced by `translate_demo.py`), clones the
+speaker's voice from the source audio, generates speech per-segment in
+the target language, and assembles a single WAV with correct timing.
+
+First run downloads the XTTS-v2 model (~1.8 GB). Subsequent runs use the
+cached model.
