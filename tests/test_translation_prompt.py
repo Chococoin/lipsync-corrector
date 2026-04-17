@@ -1,4 +1,10 @@
-from core.translation.prompt import build_system_prompt, build_tool_schema
+from core.transcription.models import Segment
+from core.translation.prompt import (
+    WORDS_PER_SECOND,
+    build_system_prompt,
+    build_tool_schema,
+    target_word_count,
+)
 
 
 class TestBuildSystemPrompt:
@@ -14,6 +20,10 @@ class TestBuildSystemPrompt:
     def test_mentions_conversational_content(self):
         prompt = build_system_prompt("es", "en")
         assert "conversational" in prompt.lower()
+
+    def test_mentions_target_word_count(self):
+        prompt = build_system_prompt("es", "en")
+        assert "target word count" in prompt.lower()
 
 
 class TestBuildToolSchema:
@@ -40,3 +50,30 @@ class TestBuildToolSchema:
         assert set(item["required"]) == {"id", "text"}
         assert item["properties"]["id"]["type"] == "integer"
         assert item["properties"]["text"]["type"] == "string"
+
+
+class TestTargetWordCount:
+    def _seg(self, start, end):
+        return Segment(
+            text="placeholder", start=start, end=end,
+            words=(), avg_logprob=-0.3, no_speech_prob=0.01,
+        )
+
+    def test_english_2_8_seconds(self):
+        # 2.8s × 2.5 wps = 7
+        assert target_word_count(self._seg(0.0, 2.8), "en") == 7
+
+    def test_spanish_2_0_seconds(self):
+        # 2.0s × 3.0 wps = 6
+        assert target_word_count(self._seg(0.0, 2.0), "es") == 6
+
+    def test_german_3_0_seconds(self):
+        # 3.0s × 2.3 wps = 6.9 → 7
+        assert target_word_count(self._seg(1.0, 4.0), "de") == 7
+
+    def test_unknown_language_uses_default(self):
+        # 2.0s × 2.5 (default) = 5
+        assert target_word_count(self._seg(0.0, 2.0), "xx") == 5
+
+    def test_very_short_segment_returns_at_least_one(self):
+        assert target_word_count(self._seg(0.0, 0.1), "en") >= 1

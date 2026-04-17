@@ -182,6 +182,17 @@ class TestClientInvocation:
         assert len(kwargs["tools"]) == 1
         assert kwargs["tools"][0]["name"] == "submit_translation"
 
+    def test_user_message_includes_target_word_count(self):
+        t = _build_source_transcription(["Hola a todos."])
+        client = _make_mock_client({
+            "segments": [{"id": 0, "text": "Hi everyone."}]
+        })
+        translate(t, target_language="en", client=client)
+        _, kwargs = client.messages.create.call_args
+        user_msg = kwargs["messages"][0]["content"]
+        assert "(target ~" in user_msg
+        assert "words)" in user_msg
+
 
 class TestErrorPaths:
     def test_missing_tool_use_raises_valueerror(self):

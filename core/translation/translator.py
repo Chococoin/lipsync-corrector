@@ -7,7 +7,7 @@ from typing import Optional
 import anthropic
 
 from core.transcription.models import Segment, Transcription
-from core.translation.prompt import build_system_prompt, build_tool_schema
+from core.translation.prompt import build_system_prompt, build_tool_schema, target_word_count
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 MAX_TOKENS = 4096
@@ -64,7 +64,7 @@ def translate(
     )
     tool_schema = build_tool_schema()
     user_content = "Translate these segments:\n\n" + "\n".join(
-        f"{i}: {seg.text}"
+        f"{i} (target ~{target_word_count(seg, target_language)} words): {seg.text}"
         for i, seg in enumerate(transcription.segments)
     )
 
