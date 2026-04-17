@@ -116,7 +116,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                         if tracked is not None:
                             face_crop = crop_face_region(frame, tracked)
                             processed = lipsync_model.process([face_crop.image], args.audio)
-                            frame = blend_back(frame, processed[0], face_crop)
+                            frame = blend_back(frame, processed[0], face_crop, mouth_only=True)
                     writer.write(frame)
                 print(f"Wrote {writer.frames_written} frames to intermediate.")
 
